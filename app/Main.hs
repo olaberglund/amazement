@@ -3,7 +3,10 @@ module Main where
 import Algebra.Graph.Undirected (Graph, edge, overlay, vertex, vertices)
 import qualified Algebra.Graph.Undirected as G
 import Control.Arrow (Arrow (first, second))
-import Data.List (iterate')
+import Data.Function (on)
+import Data.List (groupBy, iterate', sort, sortOn)
+import Data.List.Split (chunksOf)
+import Data.Ord (comparing)
 import Data.Sequence (iterateN)
 import Data.Set (Set, insert, notMember)
 import qualified Data.Set as S
@@ -23,6 +26,20 @@ data MazeState = MazeState
 
 type Maze = Graph Location
 
+data MazeEdge = MazeEdge
+  { slope :: D,
+    level :: Int
+  }
+  deriving (Show, Eq)
+
+instance Ord MazeEdge where
+  (MazeEdge DX l1) `compare` MazeEdge DX l2 = l1 `compare` l2
+  (MazeEdge DY l1) `compare` MazeEdge DY l2 = l1 `compare` l2
+  (MazeEdge DX l1) `compare` MazeEdge DY l2 = l2 `compare` l1
+  (MazeEdge DY l1) `compare` MazeEdge DX l2 = l1 `compare` l2
+
+-- sort first by axis value, then direction
+
 -- Need to keep track of:
 -- 1. Current location
 -- 2. Visited locations
@@ -33,9 +50,9 @@ type Maze = Graph Location
 -- --  If the neighbor has not yet been visited,
 -- --  add the traveled edge to the spanning tree.
 -- --  Repeat step 2 until all vertexes have been visited.
-width = 10
+width = 4
 
-height = 10
+height = width
 
 initialMaze :: MazeState
 initialMaze =
@@ -48,12 +65,33 @@ initialMaze =
         }
 
 main :: IO ()
-main = do
-  let m = iterateUntil haveVisitedAll aldousStep initialMaze
-  print (maze m)
-  where
-    haveVisitedAll :: MazeState -> Bool
-    haveVisitedAll m = S.size (visited m) == width * height
+main = print m
+
+m = maze $ iterateUntil haveVisitedAll aldousStep initialMaze
+
+data D = DX | DY deriving (Eq, Ord, Show)
+
+d :: (Location, Location) -> D
+d ((x1, _), (x2, _)) = if x1 == x2 then DY else DX
+
+axisValue :: (Location, Location) -> Int
+axisValue dl = case d dl of
+  DX -> snd (fst dl)
+  DY -> fst (fst dl)
+
+haveVisitedAll :: MazeState -> Bool
+haveVisitedAll m = S.size (visited m) == width * height
+
+ls :: [MazeEdge]
+ls = mkMazeEdge <$> G.edgeList m
+
+mkMazeEdge :: (Location, Location) -> MazeEdge
+mkMazeEdge = MazeEdge <$> d <*> axisValue
+
+groupByAxisValue :: [MazeEdge] -> [[MazeEdge]]
+groupByAxisValue = undefined
+
+-- goal: group edges by axis value
 
 -- https://www.w3.org/TR/xml-entity-names/025.html
 
