@@ -26,7 +26,7 @@ data MazeState = MazeState
 
 type Maze = Graph Location
 
-newtype Line = Line (Location, Location) deriving (Show, Eq)
+data Line = Line Location Location deriving (Show, Eq)
 
 instance Ord Line where
   compare = comparing level <> comparing slope
@@ -35,7 +35,7 @@ instance Ord Line where
 -- --  Choose a connected neighbor of the vertex and travel to it.
 -- --  If the neighbor has not yet been visited,
 -- --  add the traveled edge to the spanning tree.
--- --  Repeat step 2 until all vertexes have been visited.
+- --  Repeat step 2 until all vertexes have been visited.
 width = 4
 
 height = width
@@ -58,33 +58,40 @@ m = maze $ iterateUntil haveVisitedAll aldousStep initialMaze
 data D = DX | DY deriving (Eq, Ord, Show)
 
 slope :: Line -> D
-slope (Line ((x1, _), (x2, _))) = if x1 == x2 then DY else DX
+slope (Line (x1, _) (x2, _)) = if x1 == x2 then DY else DX
 
 level :: Line -> Int
-level l@(Line dl) = case slope l of
-  DX -> snd (fst dl)
-  DY -> fst (fst dl)
+level l@(Line (x, y) _) = case slope l of
+  DX -> y
+  DY -> x
 
 haveVisitedAll :: MazeState -> Bool
 haveVisitedAll m = S.size (visited m) == width * height
 
 ls :: [Line]
-ls = map Line $ G.edgeList m
+ls = map (uncurry Line) $ G.edgeList m
 
 slopeRows :: [Line] -> [[Line]]
 slopeRows = groupBy ((==) `on` slope) . sort
 
 lineStart :: Line -> Int
-lineStart l@(Line ((x1, y1), (x2, y2))) = case slope l of
+lineStart l@(Line (x1, y1) (x2, y2)) = case slope l of
   DX -> min x1 x2
   DY -> min y1 y2
 
 showMaze :: Maze -> String
 showMaze m = unlines $ map showRow $ slopeRows ls
   where
-    showRow r = (\n i -> if n == i then 'x' else ' ') <$> [0 .. width - 1] <*> [lineStart $ head r]
+    showRow :: [Line] -> String
+    showRow = map (\p -> if p then 'x' else ' ') . prefixMatches [0 .. width - 1] . map lineStart
 
 -- https://www.w3.org/TR/xml-entity-names/025.html
+-- Write this function using foldr
+
+prefixMatches :: [Int] -> [Int] -> [Bool]
+prefixMatches [] _ = []
+prefixMatches l [] = replicate (length l) False
+prefixMatches (x : xs) l@(y : ys) = if x == y then True : prefixMatches xs ys else False : prefixMatches xs l
 
 iterateUntil :: (a -> Bool) -> (a -> a) -> a -> a
 iterateUntil p f = head . filter p . iterate' f
