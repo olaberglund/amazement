@@ -26,16 +26,20 @@ data MazeState = MazeState
 
 type Maze = Graph Location
 
-data Line = Line Location Location deriving (Show, Eq)
+data Line = Line
+  { p :: Location,
+    q :: Location
+  }
+  deriving (Eq, Show)
 
 instance Ord Line where
-  compare = comparing level <> comparing slope
+  compare = comparing minY <> comparing slope <> comparing minX
 
 -- --  Choose a vertex. Any vertex.
 -- --  Choose a connected neighbor of the vertex and travel to it.
 -- --  If the neighbor has not yet been visited,
 -- --  add the traveled edge to the spanning tree.
-- --  Repeat step 2 until all vertexes have been visited.
+--  Repeat step 2 until all vertexes have been visited.
 width = 4
 
 height = width
@@ -60,10 +64,11 @@ data D = DX | DY deriving (Eq, Ord, Show)
 slope :: Line -> D
 slope (Line (x1, _) (x2, _)) = if x1 == x2 then DY else DX
 
-level :: Line -> Int
-level l@(Line (x, y) _) = case slope l of
-  DX -> y
-  DY -> x
+minY :: Line -> Int
+minY (Line (_, y1) (_, y2)) = min y1 y2
+
+minX :: Line -> Int
+minX (Line (x1, _) (x2, _)) = min x1 x2
 
 haveVisitedAll :: MazeState -> Bool
 haveVisitedAll m = S.size (visited m) == width * height
@@ -74,16 +79,16 @@ ls = map (uncurry Line) $ G.edgeList m
 slopeRows :: [Line] -> [[Line]]
 slopeRows = groupBy ((==) `on` slope) . sort
 
-lineStart :: Line -> Int
-lineStart l@(Line (x1, y1) (x2, y2)) = case slope l of
-  DX -> min x1 x2
-  DY -> min y1 y2
-
 showMaze :: Maze -> String
 showMaze m = unlines $ map showRow $ slopeRows ls
   where
     showRow :: [Line] -> String
-    showRow = map (\p -> if p then 'x' else ' ') . prefixMatches [0 .. width - 1] . map lineStart
+    showRow = map (\p -> if p then 'X' else ' ') . prefixMatches [0 .. width - 1] . map minX
+
+    showLine :: Line -> String
+    showLine l = case slope l of
+      DX -> "═"
+      DY -> "║"
 
 -- https://www.w3.org/TR/xml-entity-names/025.html
 -- Write this function using foldr
