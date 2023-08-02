@@ -4,9 +4,17 @@ import Algebra.Graph.Undirected (Graph, edge, overlay, vertex, vertices)
 import qualified Algebra.Graph.Undirected as G
 import Control.Arrow (Arrow (first, second))
 import Data.Function (on)
-import Data.List (group, groupBy, iterate', sort, sortOn)
+import Data.List
+  ( group,
+    groupBy,
+    iterate',
+    sort,
+    sortBy,
+    sortOn,
+    (\\),
+  )
 import Data.List.Split (chunksOf)
-import Data.Ord (comparing)
+import qualified Data.Ord as Ord (Down (Down))
 import Data.Sequence (iterateN, mapWithIndex)
 import Data.Set (Set, insert, notMember)
 import qualified Data.Set as S
@@ -26,23 +34,16 @@ data MazeState = MazeState
 
 type Maze = Graph Location
 
-data Line = Line
-  { p :: Location,
-    q :: Location
-  }
-  deriving (Eq, Show)
-
-instance Ord Line where
-  compare = comparing minY <> comparing slope <> comparing minX
+-- --  Choose a vertex. Any vertex.
 
 -- --  Choose a vertex. Any vertex.
 -- --  Choose a connected neighbor of the vertex and travel to it.
 -- --  If the neighbor has not yet been visited,
 -- --  add the traveled edge to the spanning tree.
 --  Repeat step 2 until all vertexes have been visited.
-width = 4
+width = 3 * height
 
-height = width
+height = 10
 
 initialMaze :: MazeState
 initialMaze =
@@ -59,44 +60,56 @@ main = print m
 
 m = maze $ iterateUntil haveVisitedAll aldousStep initialMaze
 
-data D = DX | DY deriving (Eq, Ord, Show)
-
-slope :: Line -> D
-slope (Line (x1, _) (x2, _)) = if x1 == x2 then DY else DX
-
-minY :: Line -> Int
-minY (Line (_, y1) (_, y2)) = min y1 y2
-
-minX :: Line -> Int
-minX (Line (x1, _) (x2, _)) = min x1 x2
-
 haveVisitedAll :: MazeState -> Bool
 haveVisitedAll m = S.size (visited m) == width * height
 
-ls :: [Line]
-ls = map (uncurry Line) $ G.edgeList m
+-- https://www.w3.org/TR/xml-entity-names/025.html
 
-slopeRows :: [Line] -> [[Line]]
-slopeRows = groupBy ((==) `on` slope) . sort
+vertical = "║"
+
+horizontal = "═"
+
+tlcorner = "╔"
+
+nl = "\n"
+
+data Direction = N | E | S | W deriving (Show, Eq, Ord)
+
+dir :: Location -> Location -> Direction
+dir (x, y) (x', y') =
+  case (x' - x, y' - y) of
+    (0, -1) -> N
+    (1, 0) -> E
+    (0, 1) -> S
+    (-1, 0) -> W
+
+showWalls1 :: [Direction] -> String
+showWalls1 [] = "  "
+showWalls1 [N] = horizontal <> horizontal
+showWalls1 [W] = vertical <> " "
+showWalls1 [N, W] = tlcorner <> horizontal
+
+showWalls2 :: [Direction] -> String
+showWalls2 [] = "  "
+showWalls2 [N] = "  "
+showWalls2 [W] = vertical <> " "
+showWalls2 [N, W] = vertical <> " "
+
+-- showCell :: (Location, [Location]) -> String
+showCell1 :: (Location, [Location]) -> String
+showCell1 (loc, neighbors) = showWalls1 walls
+  where
+    walls = [N, W] \\ map (dir loc) neighbors
+
+showCell2 :: (Location, [Location]) -> String
+showCell2 (loc, neighbors) = showWalls2 walls
+  where
+    walls = [N, W] \\ map (dir loc) neighbors
 
 showMaze :: Maze -> String
-showMaze m = unlines $ map showRow $ slopeRows ls
+showMaze = unlines . (++ [concat $ replicate (2 * width) horizontal]) . map showRow . chunksOf width . sortOn (snd . fst) . G.adjacencyList
   where
-    showRow :: [Line] -> String
-    showRow = map (\p -> if p then 'X' else ' ') . prefixMatches [0 .. width - 1] . map minX
-
-    showLine :: Line -> String
-    showLine l = case slope l of
-      DX -> "═"
-      DY -> "║"
-
--- https://www.w3.org/TR/xml-entity-names/025.html
--- Write this function using foldr
-
-prefixMatches :: [Int] -> [Int] -> [Bool]
-prefixMatches [] _ = []
-prefixMatches l [] = replicate (length l) False
-prefixMatches (x : xs) l@(y : ys) = if x == y then True : prefixMatches xs ys else False : prefixMatches xs l
+    showRow r = concatMap showCell1 r <> vertical <> nl <> concatMap showCell2 r <> vertical
 
 iterateUntil :: (a -> Bool) -> (a -> a) -> a -> a
 iterateUntil p f = head . filter p . iterate' f
@@ -117,18 +130,18 @@ aldousStep m =
 
 findLegalMove :: StdGen -> Location -> (Location, StdGen)
 findLegalMove gen loc =
-  let (dir, gen') = randomDirection gen
+  let (dir, gen') = randomMovement gen
       loc' = move dir loc
    in if withinBounds loc' then (loc', gen') else findLegalMove gen' loc
   where
     withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
 
-randomDirection :: StdGen -> (Direction, StdGen)
-randomDirection = first toEnum . R.randomR (0 :: Int, fromEnum (maxBound :: Direction))
+randomMovement :: StdGen -> (Movement, StdGen)
+randomMovement = first toEnum . R.randomR (0 :: Int, fromEnum (maxBound :: Movement))
 
-data Direction = Up | Right | Down | Left deriving (Enum, Bounded, Show)
+data Movement = Up | Right | Down | Left deriving (Enum, Bounded, Show)
 
-move :: Direction -> Location -> Location
+move :: Movement -> Location -> Location
 move Up = second succ
 move Right = first succ
 move Down = second pred
