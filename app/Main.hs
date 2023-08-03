@@ -23,6 +23,8 @@ import System.Random (StdGen)
 import qualified System.Random as R
 import Prelude hiding (Left, Right)
 
+main = print "Hello!"
+
 type Location = (Int, Int)
 
 data MazeState = MazeState
@@ -34,14 +36,7 @@ data MazeState = MazeState
 
 type Maze = Graph Location
 
--- --  Choose a vertex. Any vertex.
-
--- --  Choose a vertex. Any vertex.
--- --  Choose a connected neighbor of the vertex and travel to it.
--- --  If the neighbor has not yet been visited,
--- --  add the traveled edge to the spanning tree.
---  Repeat step 2 until all vertexes have been visited.
-width = 1 * height
+width = 2 * height
 
 height = 20
 
@@ -55,19 +50,20 @@ initialMaze n =
           gen = R.mkStdGen n
         }
 
-main = print 2
-
 create :: Int -> IO ()
-create = putStr . showMaze . m
+create = putStr . showMaze . generateMaze
 
-m = maze . iterateUntil haveVisitedAll aldousStep . initialMaze
+generateMaze :: Int -> Maze
+generateMaze = maze . iterateUntil haveVisitedAll aldousStep . initialMaze
 
 haveVisitedAll :: MazeState -> Bool
-haveVisitedAll m = S.size (visited m) == width * height
+haveVisitedAll = (width * height ==) . S.size . visited
 
--- https://www.w3.org/TR/xml-entity-names/025.html
+wall = "██"
 
-wall = "█"
+space = "  "
+
+blockSize = length space
 
 data Direction = N | E | S | W deriving (Show, Eq, Ord)
 
@@ -79,36 +75,46 @@ dir (x, y) (x', y') =
     (0, 1) -> S
     (-1, 0) -> W
 
-showWallsX :: [Direction] -> String
-showWallsX [] = wall <> "  "
-showWallsX [N] = wall <> wall <> wall
-showWallsX [W] = wall <> "  "
-showWallsX [N, W] = wall <> wall <> wall
-
-showWallsY :: [Direction] -> String
-showWallsY [] = "   "
-showWallsY [N] = "   "
-showWallsY [W] = wall <> "  "
-showWallsY [N, W] = wall <> "  "
-
--- showCell :: (Location, [Location]) -> String
-showCell1 :: (Location, [Location]) -> String
-showCell1 (loc, neighbors) = showWallsX walls
+showBlockTop :: (Location, [Location]) -> String
+showBlockTop = showWalls . walls
   where
-    walls = [N, W] \\ map (dir loc) neighbors
+    showWalls [] = wall <> space
+    showWalls [N] = wall <> wall
+    showWalls [W] = wall <> space
+    showWalls [N, W] = wall <> wall
 
-showCell2 :: (Location, [Location]) -> String
-showCell2 (loc, neighbors) = showWallsY walls
+showBlockBottom :: (Location, [Location]) -> String
+showBlockBottom = showWalls . walls
   where
-    walls = [N, W] \\ map (dir loc) neighbors
+    showWalls [] = space <> space
+    showWalls [N] = space <> space
+    showWalls [W] = wall <> space
+    showWalls [N, W] = wall <> space
+
+walls :: (Location, [Location]) -> [Direction]
+walls (loc, neighbors) = [N, W] \\ map (dir loc) neighbors
 
 showMaze :: Maze -> String
-showMaze = unlines . (++ [concat $ wall : replicate (length (showWallsY []) * width) wall]) . map showRow . chunksOf width . sortOn (snd . fst) . G.adjacencyList
+showMaze = unlines . appendFloor . map showBlockRow . mkBlocks . sortOn y . G.adjacencyList
   where
-    showRow r = concatMap showCell1 r <> wall <> "\n" <> concatMap showCell2 r <> wall
+    showRow showF = (<> wall) . concatMap showF
+    bottom = showRow showBlockBottom
+    top = (<> wall) . concatMap showBlockTop
+    showBlockRow r = top r <> "\n" <> bottom r
+    mkBlocks = chunksOf width
+    y = snd . fst
+
+appendFloor :: [String] -> [String]
+appendFloor = (++ [concat $ wall : replicate (blockSize * width) wall])
 
 iterateUntil :: (a -> Bool) -> (a -> a) -> a -> a
 iterateUntil p f = head . filter p . iterate' f
+
+-- --  Choose a vertex. Any vertex.
+-- --  Choose a connected neighbor of the vertex and travel to it.
+-- --  If the neighbor has not yet been visited,
+-- --  add the traveled edge to the spanning tree.
+--  Repeat step 2 until all vertexes have been visited.
 
 aldousStep :: MazeState -> MazeState
 aldousStep m =
@@ -133,9 +139,9 @@ findLegalMove gen loc =
     withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
 
 randomMovement :: StdGen -> (Movement, StdGen)
-randomMovement = first toEnum . R.randomR (0 :: Int, fromEnum (maxBound :: Movement))
+randomMovement = first toEnum . R.randomR (0, 3)
 
-data Movement = Up | Right | Down | Left deriving (Enum, Bounded, Show)
+data Movement = Up | Right | Down | Left deriving (Enum)
 
 move :: Movement -> Location -> Location
 move Up = second succ
