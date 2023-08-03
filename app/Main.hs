@@ -41,37 +41,33 @@ type Maze = Graph Location
 -- --  If the neighbor has not yet been visited,
 -- --  add the traveled edge to the spanning tree.
 --  Repeat step 2 until all vertexes have been visited.
-width = 3 * height
+width = 1 * height
 
-height = 10
+height = 20
 
-initialMaze :: MazeState
-initialMaze =
+initialMaze :: Int -> MazeState
+initialMaze n =
   let startLocation = (0, 0)
    in MazeState
         { maze = G.empty,
           location = startLocation,
           visited = S.singleton startLocation,
-          gen = R.mkStdGen 10
+          gen = R.mkStdGen n
         }
 
-main :: IO ()
-main = print m
+main = print 2
 
-m = maze $ iterateUntil haveVisitedAll aldousStep initialMaze
+create :: Int -> IO ()
+create = putStr . showMaze . m
+
+m = maze . iterateUntil haveVisitedAll aldousStep . initialMaze
 
 haveVisitedAll :: MazeState -> Bool
 haveVisitedAll m = S.size (visited m) == width * height
 
 -- https://www.w3.org/TR/xml-entity-names/025.html
 
-vertical = "║"
-
-horizontal = "═"
-
-tlcorner = "╔"
-
-nl = "\n"
+wall = "█"
 
 data Direction = N | E | S | W deriving (Show, Eq, Ord)
 
@@ -83,33 +79,33 @@ dir (x, y) (x', y') =
     (0, 1) -> S
     (-1, 0) -> W
 
-showWalls1 :: [Direction] -> String
-showWalls1 [] = "  "
-showWalls1 [N] = horizontal <> horizontal
-showWalls1 [W] = vertical <> " "
-showWalls1 [N, W] = tlcorner <> horizontal
+showWallsX :: [Direction] -> String
+showWallsX [] = wall <> "  "
+showWallsX [N] = wall <> wall <> wall
+showWallsX [W] = wall <> "  "
+showWallsX [N, W] = wall <> wall <> wall
 
-showWalls2 :: [Direction] -> String
-showWalls2 [] = "  "
-showWalls2 [N] = "  "
-showWalls2 [W] = vertical <> " "
-showWalls2 [N, W] = vertical <> " "
+showWallsY :: [Direction] -> String
+showWallsY [] = "   "
+showWallsY [N] = "   "
+showWallsY [W] = wall <> "  "
+showWallsY [N, W] = wall <> "  "
 
 -- showCell :: (Location, [Location]) -> String
 showCell1 :: (Location, [Location]) -> String
-showCell1 (loc, neighbors) = showWalls1 walls
+showCell1 (loc, neighbors) = showWallsX walls
   where
     walls = [N, W] \\ map (dir loc) neighbors
 
 showCell2 :: (Location, [Location]) -> String
-showCell2 (loc, neighbors) = showWalls2 walls
+showCell2 (loc, neighbors) = showWallsY walls
   where
     walls = [N, W] \\ map (dir loc) neighbors
 
 showMaze :: Maze -> String
-showMaze = unlines . (++ [concat $ replicate (2 * width) horizontal]) . map showRow . chunksOf width . sortOn (snd . fst) . G.adjacencyList
+showMaze = unlines . (++ [concat $ wall : replicate (length (showWallsY []) * width) wall]) . map showRow . chunksOf width . sortOn (snd . fst) . G.adjacencyList
   where
-    showRow r = concatMap showCell1 r <> vertical <> nl <> concatMap showCell2 r <> vertical
+    showRow r = concatMap showCell1 r <> wall <> "\n" <> concatMap showCell2 r <> wall
 
 iterateUntil :: (a -> Bool) -> (a -> a) -> a -> a
 iterateUntil p f = head . filter p . iterate' f
