@@ -3,6 +3,7 @@ module Main where
 import Algebra.Graph.Undirected (Graph, edge, overlay, vertex, vertices)
 import qualified Algebra.Graph.Undirected as G
 import Control.Arrow (Arrow (first, second))
+import Control.Monad.IO.Class
 import Data.Function (on)
 import Data.List
   ( group,
@@ -18,12 +19,11 @@ import qualified Data.Ord as Ord (Down (Down))
 import Data.Sequence (iterateN, mapWithIndex)
 import Data.Set (Set, insert, notMember)
 import qualified Data.Set as S
-import Debug.Trace (trace)
+import System.Console.ANSI (clearScreen)
+import System.Console.Haskeline
 import System.Random (StdGen)
 import qualified System.Random as R
 import Prelude hiding (Left, Right)
-
-main = print "Hello!"
 
 type Location = (Int, Int)
 
@@ -40,6 +40,36 @@ width = 2 * height
 
 height = 20
 
+main :: IO ()
+main = runInputT defaultSettings $ do
+  n <- getInputLine "Seed: "
+  liftIO clearScreen
+  case n of
+    Nothing -> return ()
+    Just n -> gameLoop (0, 0) (generateMaze (read n))
+  where
+    gameLoop ploc m = do
+      liftIO clearScreen
+      outputStrLn $ showMaze ploc m
+      key <- getInputChar ""
+      case key of
+        Nothing -> return ()
+        Just 'a' -> gameLoop (moveLegally ploc Left m) m
+        Just 's' -> gameLoop (moveLegally ploc Down m) m
+        Just 'd' -> gameLoop (moveLegally ploc Right m) m
+        Just 'w' -> gameLoop (moveLegally ploc Up m) m
+        Just 'q' -> return ()
+        Just _ -> gameLoop ploc m
+
+    moveLegally :: Location -> Direction -> Maze -> Location
+    moveLegally ploc dir m =
+      let ns = S.toList (G.neighbours ploc m)
+          ws = allWalls (ploc, ns)
+          ploc' = move' dir ploc
+       in if dir `elem` ws || not (withinBounds ploc')
+            then ploc
+            else ploc'
+
 initialMaze :: Int -> MazeState
 initialMaze n =
   let startLocation = (0, 0)
@@ -49,9 +79,6 @@ initialMaze n =
           visited = S.singleton startLocation,
           gen = R.mkStdGen n
         }
-
-create :: Int -> IO ()
-create = putStr . showMaze . generateMaze
 
 generateMaze :: Int -> Maze
 generateMaze = maze . iterateUntil haveVisitedAll aldousStep . initialMaze
@@ -63,44 +90,50 @@ wall = "██"
 
 space = "  "
 
-blockSize = length space
+player = "◁▷"
 
-data Direction = N | E | S | W deriving (Show, Eq, Ord)
+blockSize = length space
 
 dir :: Location -> Location -> Direction
 dir (x, y) (x', y') =
   case (x' - x, y' - y) of
-    (0, -1) -> N
-    (1, 0) -> E
-    (0, 1) -> S
-    (-1, 0) -> W
+    (0, -1) -> Up
+    (1, 0) -> Right
+    (0, 1) -> Down
+    (-1, 0) -> Left
 
-showBlockTop :: (Location, [Location]) -> String
-showBlockTop = showWalls . walls
+showBlockTop :: Location -> (Location, [Location]) -> String
+showBlockTop ploc b@(loc, _) = showWalls (walls b)
   where
     showWalls [] = wall <> space
-    showWalls [N] = wall <> wall
-    showWalls [W] = wall <> space
-    showWalls [N, W] = wall <> wall
+    showWalls [Up] = wall <> wall
+    showWalls [Left] = wall <> space
+    showWalls [Up, Left] = wall <> wall
 
-showBlockBottom :: (Location, [Location]) -> String
-showBlockBottom = showWalls . walls
+showBlockBottom :: Location -> (Location, [Location]) -> String
+showBlockBottom ploc b@(loc, _) = showWalls (walls b)
   where
-    showWalls [] = space <> space
-    showWalls [N] = space <> space
-    showWalls [W] = wall <> space
-    showWalls [N, W] = wall <> space
+    showWalls [] = space <> spaceOrPlayer ploc loc
+    showWalls [Up] = space <> spaceOrPlayer ploc loc
+    showWalls [Left] = wall <> spaceOrPlayer ploc loc
+    showWalls [Up, Left] = wall <> spaceOrPlayer ploc loc
+
+spaceOrPlayer :: Location -> Location -> String
+spaceOrPlayer loc ploc = if loc == ploc then player else space
 
 walls :: (Location, [Location]) -> [Direction]
-walls (loc, neighbors) = [N, W] \\ map (dir loc) neighbors
+walls (loc, neighbors) = [Up, Left] \\ map (dir loc) neighbors
 
-showMaze :: Maze -> String
-showMaze = unlines . appendFloor . map showBlockRow . mkBlocks . sortOn y . G.adjacencyList
+allWalls :: (Location, [Location]) -> [Direction]
+allWalls (loc, neighbors) = [Up, Left, Down, Right] \\ map (dir loc) neighbors
+
+showMaze :: Location -> Maze -> String
+showMaze ploc = unlines . appendFloor . map (showBlockRow ploc) . mkBlocks . sortOn y . G.adjacencyList
   where
     showRow showF = (<> wall) . concatMap showF
-    bottom = showRow showBlockBottom
-    top = (<> wall) . concatMap showBlockTop
-    showBlockRow r = top r <> "\n" <> bottom r
+    bottom = showRow . showBlockBottom
+    top = showRow . showBlockTop
+    showBlockRow ploc r = top ploc r <> "\n" <> bottom ploc r
     mkBlocks = chunksOf width
     y = snd . fst
 
@@ -135,16 +168,23 @@ findLegalMove gen loc =
   let (dir, gen') = randomMovement gen
       loc' = move dir loc
    in if withinBounds loc' then (loc', gen') else findLegalMove gen' loc
-  where
-    withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
 
-randomMovement :: StdGen -> (Movement, StdGen)
+withinBounds :: Location -> Bool
+withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
+
+randomMovement :: StdGen -> (Direction, StdGen)
 randomMovement = first toEnum . R.randomR (0, 3)
 
-data Movement = Up | Right | Down | Left deriving (Enum)
+data Direction = Up | Right | Down | Left deriving (Enum, Eq, Show)
 
-move :: Movement -> Location -> Location
+move :: Direction -> Location -> Location
 move Up = second succ
 move Right = first succ
 move Down = second pred
 move Left = first pred
+
+move' :: Direction -> Location -> Location
+move' Down = second succ
+move' Right = first succ
+move' Up = second pred
+move' Left = first pred
