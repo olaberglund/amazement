@@ -19,7 +19,7 @@ import qualified Data.Ord as Ord (Down (Down))
 import Data.Sequence (iterateN, mapWithIndex)
 import Data.Set (Set, insert, notMember)
 import qualified Data.Set as S
-import System.Console.ANSI (clearScreen)
+import System.Console.ANSI (Color (Red), ColorIntensity (Vivid), ConsoleLayer (Foreground), SGR (Reset, SetColor), clearScreen, setSGRCode)
 import System.Console.Haskeline
 import System.Random (StdGen)
 import qualified System.Random as R
@@ -58,6 +58,15 @@ main = runInputT defaultSettings $ do
         Just 's' -> gameLoop (moveLegally ploc Down m) m
         Just 'd' -> gameLoop (moveLegally ploc Right m) m
         Just 'w' -> gameLoop (moveLegally ploc Up m) m
+        -- cheating
+        Just 'j' -> gameLoop (move Left ploc) m
+        Just 'l' -> gameLoop (move Right ploc) m
+        Just 'k' -> gameLoop (move Up ploc) m
+        Just 'i' -> gameLoop (move Down ploc) m
+        Just 'r' -> gameLoop (0, 0) m
+        Just 'g' -> gameLoop (width - 1, height - 1) m
+        -- meta
+        Just 'n' -> liftIO clearScreen >> liftIO main
         Just 'q' -> return ()
         Just _ -> gameLoop ploc m
 
@@ -90,7 +99,7 @@ wall = "██"
 
 space = "  "
 
-player = "◁▷"
+player = setSGRCode [SetColor Foreground Vivid Red] <> wall <> setSGRCode [Reset]
 
 blockSize = length space
 
