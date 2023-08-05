@@ -1,10 +1,9 @@
 module Generators where
 
-import Algebra.Graph.Undirected (Graph, edge, overlay, vertex, vertices)
+import Algebra.Graph.Undirected (edge, overlay)
 import qualified Algebra.Graph.Undirected as G
 import Control.Arrow (first)
-import Data.Set (Set, insert, notMember)
-import qualified Data.Set as S
+import Data.Set (insert, notMember)
 import System.Random (StdGen)
 import qualified System.Random as R
 import Types
@@ -38,13 +37,3 @@ findLegalMove gen loc =
 
 randomMovement :: StdGen -> (Direction, StdGen)
 randomMovement = first toEnum . R.randomR (0, 3)
-
-initialMaze :: Int -> MazeState
-initialMaze n =
-  let startLocation = (0, 0)
-   in MazeState
-        { maze = G.empty,
-          location = startLocation,
-          visited = S.singleton startLocation,
-          gen = R.mkStdGen n
-        }

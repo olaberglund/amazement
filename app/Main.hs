@@ -1,8 +1,6 @@
 module Main where
 
-import Control.Arrow (Arrow (first, second))
 import Control.Monad.IO.Class (liftIO)
-import Data.List (iterate')
 import Generators (aldousStep)
 import Showing
 import System.Console.ANSI (clearScreen)

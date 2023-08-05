@@ -2,15 +2,7 @@ module Utils where
 
 import qualified Algebra.Graph.Undirected as G
 import Control.Arrow (first, second)
-import Data.List
-  ( group,
-    groupBy,
-    iterate',
-    sort,
-    sortBy,
-    sortOn,
-    (\\),
-  )
+import Data.List (iterate', (\\))
 import qualified Data.Set as S
 import qualified System.Random as R
 import Types
