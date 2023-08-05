@@ -1,33 +1,29 @@
 module Main where
 
 import Control.Arrow (Arrow (first, second))
-import Control.Monad.IO.Class
-import Data.Function (on)
+import Control.Monad.IO.Class (liftIO)
 import Data.List (iterate')
 import Generators (aldousStep)
 import Showing
 import System.Console.ANSI (clearScreen)
 import System.Console.Haskeline
-import System.Random (StdGen)
-import qualified System.Random as R
 import Types
 import Utils
 import Prelude hiding (Left, Right)
 
 main :: IO ()
 main = runInputT defaultSettings $ do
-  n <- getInputLine "Seed: "
   liftIO clearScreen
+  n <- getInputLine "Seed: "
   case n of
     Nothing -> return ()
-    Just n -> gameLoop (0, 0) (generateMaze (read n))
+    Just n -> gameLoop (0, 0) (generateMaze aldousStep (read n))
   where
     gameLoop ploc m = do
       liftIO clearScreen
       outputStrLn $ showMaze ploc m
       key <- getInputChar ""
       case key of
-        Nothing -> return ()
         Just 'w' -> gameLoop (moveLegally ploc Up m) m
         Just 's' -> gameLoop (moveLegally ploc Down m) m
         Just 'd' -> gameLoop (moveLegally ploc Right m) m
@@ -42,7 +38,4 @@ main = runInputT defaultSettings $ do
         -- meta
         Just 'n' -> liftIO clearScreen >> liftIO main
         Just 'q' -> return ()
-        Just _ -> gameLoop ploc m
-
-generateMaze :: Int -> Maze
-generateMaze = maze . iterateUntil haveVisitedAll aldousStep . initialMaze
+        _ -> gameLoop ploc m

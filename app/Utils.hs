@@ -20,6 +20,9 @@ width = 2 * height
 
 height = 20
 
+generateMaze :: (MazeState -> MazeState) -> Int -> Maze
+generateMaze stepper = maze . iterateUntil haveVisitedAll stepper . initialMaze
+
 withinBounds :: Location -> Bool
 withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
 
