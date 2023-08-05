@@ -8,13 +8,19 @@ import Types
 import Utils (walls, width)
 import Prelude hiding (Left)
 
-showMaze :: Location -> Maze -> String
-showMaze ploc = unlines . appendFloor . map (showBlockRow ploc) . mkBlocks . sortOn y . G.adjacencyList
+showMaze :: MazeState -> String
+showMaze ms = unlines $ appendFloor $ map showBlockRow $ mkBlocks $ sortOn y $ G.adjacencyList $ maze ms
   where
+    showRow :: (a -> String) -> [a] -> String
     showRow showF = (<> wall) . concatMap showF
-    bottom = showRow . showBlockBottom
-    top = showRow . showBlockTop
-    showBlockRow ploc r = top ploc r <> "\n" <> bottom ploc r
+
+    bottom = showRow (showBlockBottom ms)
+
+    top = showRow (showBlockTop ms)
+
+    showBlockRow :: [(Location, [Location])] -> String
+    showBlockRow r = top r <> "\n" <> bottom r
+
     mkBlocks = chunksOf width
     y = snd . fst
 
@@ -25,25 +31,30 @@ wall = "██"
 
 space = "  "
 
-player = setSGRCode [SetColor Foreground Vivid Red] <> wall <> setSGRCode [Reset]
+playerSymbol = setSGRCode [SetColor Foreground Vivid Red] <> wall <> setSGRCode [Reset]
+
+pathSymbol = setSGRCode [SetColor Foreground Vivid Green] <> wall <> setSGRCode [Reset]
 
 blockSize = length space
 
-showBlockTop :: Location -> (Location, [Location]) -> String
-showBlockTop ploc b@(loc, _) = showWalls (walls b)
+showBlockTop :: MazeState -> (Location, [Location]) -> String
+showBlockTop ms b@(loc, _) = showWalls (walls b)
   where
     showWalls [] = wall <> space
     showWalls [Up] = wall <> wall
     showWalls [Left] = wall <> space
     showWalls [Up, Left] = wall <> wall
 
-showBlockBottom :: Location -> (Location, [Location]) -> String
-showBlockBottom ploc b@(loc, _) = showWalls (walls b)
+showBlockBottom :: MazeState -> (Location, [Location]) -> String
+showBlockBottom ms b@(loc, _) = showWalls (walls b)
   where
-    showWalls [] = space <> spaceOrPlayer ploc loc
-    showWalls [Up] = space <> spaceOrPlayer ploc loc
-    showWalls [Left] = wall <> spaceOrPlayer ploc loc
-    showWalls [Up, Left] = wall <> spaceOrPlayer ploc loc
+    showWalls [] = space <> walkCell ms loc
+    showWalls [Up] = space <> walkCell ms loc
+    showWalls [Left] = wall <> walkCell ms loc
+    showWalls [Up, Left] = wall <> walkCell ms loc
 
-spaceOrPlayer :: Location -> Location -> String
-spaceOrPlayer loc ploc = if loc == ploc then player else space
+walkCell :: MazeState -> Location -> String
+walkCell ms loc
+  | loc == player ms = playerSymbol
+  | showPath ms && loc `elem` shortestPath ms = pathSymbol
+  | otherwise = space

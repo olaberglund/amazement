@@ -10,12 +10,9 @@ import qualified System.Random as R
 import Types
 import Prelude hiding (Left, Right)
 
-width = height
+width = 2 * height
 
-height = 3
-
-generateMaze :: (MazeState -> MazeState) -> Int -> Maze
-generateMaze stepper = maze . iterateUntil haveVisitedAll stepper . initialMaze
+height = 20
 
 withinBounds :: Location -> Bool
 withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height
@@ -46,9 +43,11 @@ initialMaze n =
   let startLocation = (0, 0)
    in MazeState
         { maze = G.empty,
-          location = startLocation,
           visited = S.singleton startLocation,
-          gen = R.mkStdGen n
+          gen = R.mkStdGen n,
+          showPath = False,
+          player = startLocation,
+          shortestPath = S.empty
         }
 
 dir :: Location -> Location -> Direction

@@ -8,9 +8,11 @@ type Location = (Int, Int)
 
 data MazeState = MazeState
   { maze :: Maze,
-    location :: Location,
     visited :: Set Location,
-    gen :: StdGen
+    gen :: StdGen,
+    showPath :: Bool,
+    player :: Location,
+    shortestPath :: Set Location
   }
 
 data Direction = Up | Right | Down | Left deriving (Enum, Eq, Show)

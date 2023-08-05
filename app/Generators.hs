@@ -21,13 +21,13 @@ aldousStep m =
     then
       m
         { gen = gen',
-          maze = overlay (edge (location m) loc') (maze m),
-          location = loc',
+          maze = overlay (edge (player m) loc') (maze m),
+          player = loc',
           visited = insert loc' (visited m)
         }
-    else m {gen = gen', location = loc'}
+    else m {gen = gen', player = loc'}
   where
-    (loc', gen') = findLegalMove (gen m) (location m)
+    (loc', gen') = findLegalMove (gen m) (player m)
 
 findLegalMove :: StdGen -> Location -> (Location, StdGen)
 findLegalMove gen loc =
