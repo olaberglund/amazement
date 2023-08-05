@@ -16,3 +16,5 @@ data MazeState = MazeState
 data Direction = Up | Right | Down | Left deriving (Enum, Eq, Show)
 
 type Maze = Graph Location
+
+type Stack = (Location, [Location])

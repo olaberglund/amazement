@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module Utils where
 
 import qualified Algebra.Graph.Undirected as G
@@ -8,9 +10,9 @@ import qualified System.Random as R
 import Types
 import Prelude hiding (Left, Right)
 
-width = 2 * height
+width = height
 
-height = 20
+height = 3
 
 generateMaze :: (MazeState -> MazeState) -> Int -> Maze
 generateMaze stepper = maze . iterateUntil haveVisitedAll stepper . initialMaze
@@ -62,3 +64,12 @@ haveVisitedAll = (width * height ==) . S.size . visited
 
 iterateUntil :: (a -> Bool) -> (a -> a) -> a -> a
 iterateUntil p f = head . filter p . iterate' f
+
+push :: Stack -> Location -> Stack
+push (loc, locs) loc' = (loc', loc : locs)
+
+path :: Stack -> [Location]
+path = uncurry (:)
+
+stack :: Location -> Stack
+stack = (,[])
