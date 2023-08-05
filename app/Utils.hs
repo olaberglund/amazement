@@ -10,9 +10,9 @@ import qualified System.Random as R
 import Types
 import Prelude hiding (Left, Right)
 
-width = 2 * height
+width = height
 
-height = 20
+height = 10
 
 withinBounds :: Location -> Bool
 withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height

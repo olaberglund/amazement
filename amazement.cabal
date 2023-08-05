@@ -36,5 +36,6 @@ executable amazement
         , split
         , haskeline
         , ansi-terminal
+        , text
     hs-source-dirs:   app
     default-language: Haskell2010

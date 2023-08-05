@@ -2,6 +2,7 @@ module Main where
 
 import Control.Monad.IO.Class (liftIO)
 import qualified Data.Set as S
+import Data.Text (unpack)
 import Generators (aldousStep)
 import Showing
 import Solvers (backtracker, start)
@@ -24,7 +25,7 @@ main = runInputT defaultSettings $ do
       liftIO clearScreen
       let m = maze ms
           ploc = player ms
-      outputStrLn $ showMaze ms
+      outputStrLn $ unpack $ showMaze ms
       key <- getInputChar ""
       case key of
         Just 'w' -> gameLoop (ms {player = moveLegally ploc Up m})
