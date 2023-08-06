@@ -19,7 +19,7 @@ showMaze ms = unlines $ appendFloor $ map showBlockRow $ mkBlocks $ sortOn locat
 
     bottom, top :: [(Location, [Location])] -> Text
     bottom = showRow (showBlockBottom ms)
-    top = showRow (showBlockTop ms)
+    top = showRow showBlockTop
 
     showBlockRow :: [(Location, [Location])] -> Text
     showBlockRow r = top r <> pack "\n" <> bottom r
@@ -42,8 +42,8 @@ pathSymbol = pack $ setSGRCode [SetColor Foreground Vivid Green] <> wall <> setS
 
 blockSize = length space
 
-showBlockTop :: MazeState -> (Location, [Location]) -> Text
-showBlockTop ms b@(loc, _) = showWalls (walls b)
+showBlockTop :: (Location, [Location]) -> Text
+showBlockTop b@(loc, _) = showWalls (walls b)
   where
     showWalls [] = pwall <> space
     showWalls [Up] = pwall <> pwall

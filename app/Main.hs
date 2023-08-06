@@ -8,6 +8,7 @@ import Showing
 import Solvers (backtracker, start)
 import System.Console.ANSI (clearScreen)
 import System.Console.Haskeline
+import System.IO
 import Types
 import Utils
 import Prelude hiding (Left, Right)
@@ -15,14 +16,16 @@ import Prelude hiding (Left, Right)
 main :: IO ()
 main = runInputT defaultSettings $ do
   liftIO clearScreen
+  liftIO $ hSetBuffering stdin LineBuffering >> hSetEcho stdin True
   n <- getInputLine "Seed: "
+  liftIO clearScreen
+  liftIO $ hSetBuffering stdin NoBuffering >> hSetEcho stdin False
   case n of
     Nothing -> return ()
     Just n -> gameLoop (generateMaze aldousStep (read n))
   where
     gameLoop :: MazeState -> InputT IO ()
     gameLoop ms = do
-      liftIO clearScreen
       let m = maze ms
           ploc = player ms
       outputStrLn $ unpack $ showMaze ms
