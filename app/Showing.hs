@@ -12,7 +12,7 @@ import Utils (walls, width)
 import Prelude hiding (Left, elem, length, unlines)
 
 showMaze :: MazeState -> Text
-showMaze ms = unlines $ appendFloor $ map showBlockRow $ mkBlocks $ sortOn location $ G.adjacencyList $ maze ms
+showMaze ms = unlines . appendFloor . map showBlockRow . mkBlocks . sortOn location . G.adjacencyList $ maze ms
   where
     showRow :: (a -> Text) -> [a] -> Text
     showRow showF = (<> pwall) . T.concat . map showF
