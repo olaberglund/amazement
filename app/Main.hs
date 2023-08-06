@@ -11,6 +11,13 @@ import Showing
 import Solvers (backtracker, start)
 import System.Console.ANSI (clearScreen)
 import System.Console.Haskeline
+  ( InputT,
+    defaultSettings,
+    getInputChar,
+    getInputLine,
+    outputStrLn,
+    runInputT,
+  )
 import System.IO
 import Types
 import Utils
@@ -29,6 +36,7 @@ main = runInputT defaultSettings $ do
     Just n -> gameLoop (generateMaze aldousStep (read n))
   endTime <- liftIO getCurrentTime
   outputStrLn $ "Time: " ++ show (diffUTCTime endTime startTime)
+  outputStrLn $ "Seed: " ++ maybe "None" show n
   where
     gameLoop :: MazeState -> InputT IO ()
     gameLoop ms = do
@@ -38,7 +46,9 @@ main = runInputT defaultSettings $ do
       replicateM_ (58 - mazeHeight) (outputStrLn "")
       outputStrLn $ T.unpack $ showMaze ms
       if ploc == (width - 1, height - 1)
-        then return ()
+        then do
+          outputStrLn $ T.unpack $ showMaze ms {showPath = True}
+          return ()
         else do
           key <- getInputChar ""
           case key of
