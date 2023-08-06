@@ -12,7 +12,7 @@ import Prelude hiding (Left, Right)
 
 width = height
 
-height = 30
+height = 10
 
 withinBounds :: Location -> Bool
 withinBounds (x, y) = x >= 0 && x < width && y >= 0 && y < height

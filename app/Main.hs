@@ -3,6 +3,7 @@ module Main where
 import Control.Monad (replicateM_)
 import qualified Control.Monad
 import Control.Monad.IO.Class (liftIO)
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import Data.Time
@@ -25,9 +26,8 @@ import Prelude hiding (Left, Right)
 
 main :: IO ()
 main = runInputT defaultSettings $ do
-  liftIO clearScreen
   liftIO $ hSetBuffering stdin LineBuffering >> hSetEcho stdin True
-  n <- getInputLine "Seed: "
+  n <- getInputLine "New seed: "
   liftIO clearScreen
   liftIO $ hSetBuffering stdin NoBuffering >> hSetEcho stdin False
   startTime <- liftIO getCurrentTime
@@ -36,17 +36,20 @@ main = runInputT defaultSettings $ do
     Just n -> gameLoop (generateMaze aldousStep (read n))
   endTime <- liftIO getCurrentTime
   outputStrLn $ "Time: " ++ show (diffUTCTime endTime startTime)
-  outputStrLn $ "Seed: " ++ maybe "None" show n
+  outputStrLn $ "Seed: " ++ fromMaybe "None" n
+  liftIO main
   where
     gameLoop :: MazeState -> InputT IO ()
     gameLoop ms = do
       let m = maze ms
           ploc = player ms
           mazeHeight = length $ T.lines $ showMaze ms
-      replicateM_ (58 - mazeHeight) (outputStrLn "")
+      -- replicateM_ (58 - mazeHeight) (outputStrLn "")
+      liftIO clearScreen
       outputStrLn $ T.unpack $ showMaze ms
       if ploc == (width - 1, height - 1)
         then do
+          liftIO clearScreen
           outputStrLn $ T.unpack $ showMaze ms {showPath = True}
           return ()
         else do
